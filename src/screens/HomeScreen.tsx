@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types/navigation";
 import InterestsDisplay from "../components/InterestsDisplay";
 import { getCommonInterests } from "../services/interestsService";
+import { showError } from "../components/FriendlyErrorAlert";
 
 // Mock data for nearby users
 const mockUsers = [
@@ -80,7 +81,10 @@ export default function HomeScreen() {
     try {
       await sendConnectionRequest(userId, `Hi! I'd like to connect with you.`);
     } catch (error) {
-      // Error handling is now done in the context
+      showError(error, () => {
+        // Retry function
+        handleConnect(userId, userName);
+      });
     }
   };
 

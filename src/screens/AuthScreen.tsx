@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { showError } from "../components/FriendlyErrorAlert";
+import { createError } from "../services/errorService";
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -23,12 +25,16 @@ export default function AuthScreen() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      showError(
+        createError("validation/required-field", "Please fill in all fields")
+      );
       return;
     }
 
     if (isSignUp && !displayName) {
-      Alert.alert("Error", "Please enter your name");
+      showError(
+        createError("validation/required-field", "Please enter your name")
+      );
       return;
     }
 
@@ -42,7 +48,11 @@ export default function AuthScreen() {
         await signIn(email, password);
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Authentication failed");
+      showError(error, () => {
+        // Retry function - clear password and try again
+        setPassword("");
+        handleSubmit();
+      });
     } finally {
       setLoading(false);
     }

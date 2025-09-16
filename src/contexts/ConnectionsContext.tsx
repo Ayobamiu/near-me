@@ -5,6 +5,7 @@ import connectionsService, {
   Message,
 } from "../services/connectionsService";
 import notificationService from "../services/notificationService";
+import { createError } from "../services/errorService";
 
 interface ConnectionsContextType {
   connections: Connection[];
@@ -116,6 +117,11 @@ export const ConnectionsProvider: React.FC<{ children: React.ReactNode }> = ({
   const sendConnectionRequest = async (toUserId: string, message?: string) => {
     if (!user) return;
 
+    // Check for self-connection
+    if (toUserId === user.uid) {
+      throw createError("connection/self-request");
+    }
+
     try {
       await connectionsService.sendConnectionRequest(
         user.uid,
@@ -124,12 +130,15 @@ export const ConnectionsProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       // Show success notification
       notificationService.showConnectionSent("User");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending connection request:", error);
-      notificationService.showError(
-        "Error",
-        "Failed to send connection request"
-      );
+
+      // Handle specific error cases
+      if (error.message?.includes("already exists")) {
+        throw createError("connection/request-exists");
+      }
+
+      // Re-throw with original error for friendly error handling
       throw error;
     }
   };

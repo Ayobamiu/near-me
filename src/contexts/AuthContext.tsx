@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../services/firebase";
 import userService from "../services/userService";
+import { createError } from "../services/errorService";
 
 interface User {
   uid: string;
@@ -82,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.error("Sign in error:", error);
+      // Re-throw the error with Firebase error codes intact
       throw error;
     }
   };
@@ -121,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("User created:", result.user);
     } catch (error) {
       console.error("Sign up error:", error);
+      // Re-throw the error with Firebase error codes intact
       throw error;
     }
   };

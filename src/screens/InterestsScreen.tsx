@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useUserProfile } from "../contexts/UserProfileContext";
 import InterestsSelector from "../components/InterestsSelector";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { showError, showSuccess } from "../components/FriendlyErrorAlert";
 
 export default function InterestsScreen() {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export default function InterestsScreen() {
         setSelectedInterests(interests);
       } catch (error) {
         console.error("Error loading interests:", error);
-        Alert.alert("Error", "Failed to load your interests");
+        showError(error);
       } finally {
         setLoading(false);
       }
@@ -39,15 +40,15 @@ export default function InterestsScreen() {
     setSaving(true);
     try {
       await updateUserInterests(selectedInterests);
-      Alert.alert("Success", "Your interests have been updated!", [
-        {
-          text: "OK",
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      showSuccess("Success", "Your interests have been updated!", () => {
+        navigation.goBack();
+      });
     } catch (error) {
       console.error("Error saving interests:", error);
-      Alert.alert("Error", "Failed to save your interests");
+      showError(error, () => {
+        // Retry function
+        handleSave();
+      });
     } finally {
       setSaving(false);
     }
