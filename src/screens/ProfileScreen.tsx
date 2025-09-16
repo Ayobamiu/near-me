@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -13,6 +15,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { usePresence } from "../contexts/PresenceContext";
 import { useUserProfile } from "../contexts/UserProfileContext";
 import InterestsDisplay from "../components/InterestsDisplay";
+import useRefresh from "../hooks/useRefresh";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -20,6 +23,22 @@ export default function ProfileScreen() {
   const { getUserInterests } = useUserProfile();
   const navigation = useNavigation<any>();
   const [userInterests, setUserInterests] = useState<string[]>([]);
+
+  // Refresh functionality
+  const { refreshing, onRefresh } = useRefresh({
+    onRefresh: async () => {
+      // Force refresh of user profile data
+      console.log("ProfileScreen: Refreshing profile data...");
+      if (user) {
+        try {
+          const interests = await getUserInterests(user.uid);
+          setUserInterests(interests);
+        } catch (error) {
+          console.error("Error refreshing profile:", error);
+        }
+      }
+    },
+  });
 
   // Load user interests
   useEffect(() => {
@@ -63,57 +82,70 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {getInitials(user?.displayName || "")}
-          </Text>
-        </View>
-        <Text style={styles.userName}>{user?.displayName || "User"}</Text>
-        <Text style={styles.userHeadline}>NearMe User</Text>
-        <Text style={styles.userEmail}>{user?.email}</Text>
-
-        {/* Interests Section */}
-        <View style={styles.interestsSection}>
-          <View style={styles.interestsHeader}>
-            <Text style={styles.interestsTitle}>Interests</Text>
-            <TouchableOpacity
-              style={styles.editInterestsButton}
-              onPress={() => navigation.navigate("Interests")}
-            >
-              <Text style={styles.editInterestsButtonText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          <InterestsDisplay
-            interests={userInterests}
-            maxDisplay={5}
-            style={styles.interestsDisplay}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            title="Pull to refresh"
+            titleColor="#666"
           />
+        }
+      >
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {getInitials(user?.displayName || "")}
+            </Text>
+          </View>
+          <Text style={styles.userName}>{user?.displayName || "User"}</Text>
+          <Text style={styles.userHeadline}>NearMe User</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
+
+          {/* Interests Section */}
+          <View style={styles.interestsSection}>
+            <View style={styles.interestsHeader}>
+              <Text style={styles.interestsTitle}>Interests</Text>
+              <TouchableOpacity
+                style={styles.editInterestsButton}
+                onPress={() => navigation.navigate("Interests")}
+              >
+                <Text style={styles.editInterestsButtonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+            <InterestsDisplay
+              interests={userInterests}
+              maxDisplay={5}
+              style={styles.interestsDisplay}
+            />
+          </View>
         </View>
-      </View>
 
-      <View style={styles.settingsCard}>
-        <View style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Make me visible to others</Text>
-          <Switch value={isVisible} onValueChange={setVisibility} />
+        <View style={styles.settingsCard}>
+          <View style={styles.settingItem}>
+            <Text style={styles.settingLabel}>Make me visible to others</Text>
+            <Switch value={isVisible} onValueChange={setVisibility} />
+          </View>
+
+          <TouchableOpacity style={styles.settingButton}>
+            <Text style={styles.settingButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingButton}>
+            <Text style={styles.settingButtonText}>My Interests</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingButton}>
+            <Text style={styles.settingButtonText}>Privacy Settings</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={styles.settingButtonText}>Edit Profile</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sign Out</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={styles.settingButtonText}>My Interests</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={styles.settingButtonText}>Privacy Settings</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Sign Out</Text>
-      </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -122,6 +154,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+  scrollView: {
+    flex: 1,
     padding: 20,
   },
   profileCard: {

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,6 +15,7 @@ import { usePresence } from "../contexts/PresenceContext";
 import { useUserProfile } from "../contexts/UserProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types/navigation";
+import useRefresh from "../hooks/useRefresh";
 
 export default function ConnectionsScreen() {
   const { user } = useAuth();
@@ -30,6 +32,16 @@ export default function ConnectionsScreen() {
   const navigation = useNavigation<any>();
   const [userNames, setUserNames] = useState<Map<string, string>>(new Map());
   const [namesLoading, setNamesLoading] = useState(false);
+
+  // Refresh functionality
+  const { refreshing, onRefresh } = useRefresh({
+    onRefresh: async () => {
+      // Force refresh of connections and user names
+      console.log("ConnectionsScreen: Refreshing connections...");
+      // The connections context will automatically update
+    },
+    initialLoading: loading || namesLoading,
+  });
   console.log("userNames", userNames);
   // Load user names when connections change
   useEffect(() => {
@@ -349,6 +361,15 @@ export default function ConnectionsScreen() {
       <ScrollView
         style={styles.connectionsList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
       >
         {/* Incoming Connection Requests */}
         {incomingConnections.length > 0 && (

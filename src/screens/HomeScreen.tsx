@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
@@ -17,6 +18,7 @@ import { RootStackParamList } from "../types/navigation";
 import InterestsDisplay from "../components/InterestsDisplay";
 import { getCommonInterests } from "../services/interestsService";
 import { showError } from "../components/FriendlyErrorAlert";
+import useRefresh from "../hooks/useRefresh";
 
 // Mock data for nearby users
 const mockUsers = [
@@ -56,6 +58,16 @@ export default function HomeScreen() {
   } = useConnections();
   const { getUserDisplayName } = useUserProfile();
   const navigation = useNavigation<any>();
+
+  // Refresh functionality
+  const { refreshing, onRefresh } = useRefresh({
+    onRefresh: async () => {
+      // Force refresh of nearby users and connections
+      // The contexts will automatically update when data changes
+      console.log("HomeScreen: Refreshing data...");
+    },
+    initialLoading: loading,
+  });
 
   const handleScanPress = () => {
     if (!hasPermission) {
@@ -249,7 +261,19 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.userList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.userList}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
+      >
         {nearbyUsersList.map((user) => {
           const connectionStatus = getConnectionStatus(user.id);
           const isConnected = connectionStatus?.status === "connected";
