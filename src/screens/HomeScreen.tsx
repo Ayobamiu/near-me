@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBLE } from "../contexts/BLEContext";
+import { usePresence } from "../contexts/PresenceContext";
 
 // Mock data for nearby users
 const mockUsers = [
@@ -37,6 +38,7 @@ const mockUsers = [
 export default function HomeScreen() {
   const { isScanning, nearbyDevices, startScan, stopScan, hasPermission } =
     useBLE();
+  const { nearbyUsers, isVisible, setVisibility, loading } = usePresence();
 
   const handleScanPress = () => {
     if (!hasPermission) {
@@ -54,30 +56,55 @@ export default function HomeScreen() {
     }
   };
 
-  const allUsers = [
-    ...mockUsers,
-    ...nearbyDevices.map((device) => ({
-      id: device.id,
-      name: device.name || "Unknown Device",
-      headline: "Nearby Device",
-      distance: `${Math.abs(device.rssi || 0)}m away`,
-      interests: ["BLE Device"],
-    })),
-  ];
+  const handleVisibilityToggle = () => {
+    setVisibility(!isVisible);
+  };
+
+  // Combine real-time users with BLE devices
+  const realTimeUsers = nearbyUsers.map((user) => ({
+    id: user.id,
+    name: user.displayName,
+    headline: "Nearby User",
+    distance: "Online now",
+    interests: user.interests || ["NearMe User"],
+    isRealTime: true,
+  }));
+
+  const bleDevices = nearbyDevices.map((device) => ({
+    id: device.id,
+    name: device.name || "Unknown Device",
+    headline: "BLE Device",
+    distance: `${Math.abs(device.rssi || 0)}m away`,
+    interests: ["BLE Device"],
+    isRealTime: false,
+  }));
+
+  const allUsers = [...realTimeUsers, ...bleDevices];
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Nearby People</Text>
       <Text style={styles.subtitle}>Tap to connect with someone</Text>
 
-      <TouchableOpacity
-        style={[styles.scanButton, isScanning && styles.scanButtonActive]}
-        onPress={handleScanPress}
-      >
-        <Text style={styles.scanButtonText}>
-          {isScanning ? "Stop Scanning" : "Scan for Nearby Devices"}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.scanButton, isScanning && styles.scanButtonActive]}
+          onPress={handleScanPress}
+        >
+          <Text style={styles.scanButtonText}>
+            {isScanning ? "Stop Scanning" : "Scan for Nearby Devices"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.visibilityButton, isVisible && styles.visibilityButtonActive]}
+          onPress={handleVisibilityToggle}
+        >
+          <Text style={styles.visibilityButtonText}>
+            {isVisible ? "You're Visible" : "Make Me Visible"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView style={styles.userList} showsVerticalScrollIndicator={false}>
         {allUsers.map((user) => (
@@ -122,18 +149,36 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 20,
   },
+  buttonContainer: {
+    marginBottom: 20,
+  },
   scanButton: {
     backgroundColor: "#34C759",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 12,
     alignItems: "center",
   },
   scanButtonActive: {
     backgroundColor: "#FF3B30",
   },
   scanButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  visibilityButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  visibilityButtonActive: {
+    backgroundColor: "#34C759",
+  },
+  visibilityButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",

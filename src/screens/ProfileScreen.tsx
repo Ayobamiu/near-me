@@ -8,10 +8,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
+import { usePresence } from "../contexts/PresenceContext";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  console.log({ user });
+  const { isVisible, setVisibility } = usePresence();
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -55,7 +56,10 @@ export default function ProfileScreen() {
       <View style={styles.settingsCard}>
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>Make me visible to others</Text>
-          <Switch value={true} />
+          <Switch 
+            value={isVisible} 
+            onValueChange={setVisibility}
+          />
         </View>
 
         <TouchableOpacity style={styles.settingButton}>
