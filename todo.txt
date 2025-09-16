@@ -1,0 +1,2 @@
+x friendly error text auth
+x reload on all pages
