@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { BLEProvider } from "./src/contexts/BLEContext";
 import { PresenceProvider } from "./src/contexts/PresenceContext";
 import { ConnectionsProvider } from "./src/contexts/ConnectionsContext";
+import { UserProfileProvider } from "./src/contexts/UserProfileContext";
 
 // Import screens
 import AuthScreen from "./src/screens/AuthScreen";
@@ -62,23 +63,25 @@ function MainApp() {
   return (
     <PresenceProvider>
       <ConnectionsProvider>
-        <BLEProvider>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="MainTabs" component={TabNavigator} />
-              <Stack.Screen
-                name="Chat"
-                component={ChatScreen}
-                options={{
-                  presentation: "modal",
-                  headerShown: true,
-                  title: "Chat",
-                }}
-              />
-            </Stack.Navigator>
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </BLEProvider>
+        <UserProfileProvider>
+          <BLEProvider>
+            <NavigationContainer>
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="MainTabs" component={TabNavigator} />
+                <Stack.Screen
+                  name="Chat"
+                  component={ChatScreen}
+                  options={{
+                    presentation: "modal",
+                    headerShown: true,
+                    title: "Chat",
+                  }}
+                />
+              </Stack.Navigator>
+              <StatusBar style="auto" />
+            </NavigationContainer>
+          </BLEProvider>
+        </UserProfileProvider>
       </ConnectionsProvider>
     </PresenceProvider>
   );

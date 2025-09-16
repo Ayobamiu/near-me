@@ -11,6 +11,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useBLE } from "../contexts/BLEContext";
 import { usePresence } from "../contexts/PresenceContext";
 import { useConnections } from "../contexts/ConnectionsContext";
+import { useUserProfile } from "../contexts/UserProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types/navigation";
 
@@ -50,6 +51,7 @@ export default function HomeScreen() {
     acceptConnection,
     declineConnection,
   } = useConnections();
+  const { getUserDisplayName } = useUserProfile();
   const navigation = useNavigation<any>();
 
   const handleScanPress = () => {
@@ -186,7 +188,7 @@ export default function HomeScreen() {
     // If not in nearby users, create a basic user entry
     return {
       id: otherUserId,
-      name: `User ${otherUserId.slice(0, 8)}`,
+      name: `User ${otherUserId.slice(0, 8)}`, // Will be updated by async loading
       headline: "Connection Request",
       distance: "Offline",
       interests: ["Connection"],

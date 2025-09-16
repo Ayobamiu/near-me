@@ -7,6 +7,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../services/firebase";
+import userService from "../services/userService";
 
 interface User {
   uid: string;
@@ -43,13 +44,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser({
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
         });
+
+        // Ensure user profile exists in Firestore
+        try {
+          const existingProfile = await userService.getUserProfile(user.uid);
+          if (!existingProfile) {
+            console.log("Creating missing user profile for:", user.uid);
+            await userService.updateUserProfile(user.uid, {
+              id: user.uid,
+              displayName: user.displayName || "User",
+              email: user.email || "",
+              interests: [],
+              headline: "NearMe User",
+            });
+          }
+        } catch (profileError) {
+          console.error("Error ensuring user profile exists:", profileError);
+        }
       } else {
         setUser(null);
       }
@@ -84,6 +102,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await updateProfile(result.user, {
         displayName: displayName,
       });
+
+      // Create user profile in Firestore
+      try {
+        await userService.updateUserProfile(result.user.uid, {
+          id: result.user.uid,
+          displayName: displayName,
+          email: email,
+          interests: [],
+          headline: "NearMe User",
+        });
+        console.log("User profile created in Firestore");
+      } catch (profileError) {
+        console.error("Error creating user profile:", profileError);
+        // Don't throw here, user is still created
+      }
 
       console.log("User created:", result.user);
     } catch (error) {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 import { useConnections } from "../contexts/ConnectionsContext";
+import { usePresence } from "../contexts/PresenceContext";
+import { useUserProfile } from "../contexts/UserProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types/navigation";
 
@@ -17,7 +19,77 @@ export default function ConnectionsScreen() {
   const { user } = useAuth();
   const { connections, acceptConnection, declineConnection, loading } =
     useConnections();
+  const { nearbyUsers } = usePresence();
+  const { getUserDisplayName } = useUserProfile();
   const navigation = useNavigation<any>();
+  const [userNames, setUserNames] = useState<Map<string, string>>(new Map());
+  const [namesLoading, setNamesLoading] = useState(false);
+  console.log("userNames", userNames);
+  // Load user names when connections change
+  useEffect(() => {
+    const loadUserNames = async () => {
+      console.log(
+        "ConnectionsScreen: Loading user names for connections:",
+        connections.length
+      );
+      const userIds = new Set<string>();
+      connections.forEach((connection) => {
+        userIds.add(connection.fromUserId);
+        userIds.add(connection.toUserId);
+      });
+
+      console.log("ConnectionsScreen: User IDs to load:", Array.from(userIds));
+
+      const newUserNames = new Map(userNames);
+      const promises = [];
+
+      for (const userId of userIds) {
+        if (!newUserNames.has(userId)) {
+          console.log("ConnectionsScreen: Loading name for user:", userId);
+          promises.push(
+            getUserDisplayName(userId)
+              .then((displayName) => {
+                console.log(
+                  "ConnectionsScreen: Got name for",
+                  userId,
+                  ":",
+                  displayName
+                );
+                return { userId, displayName };
+              })
+              .catch((error) => {
+                console.error(
+                  "ConnectionsScreen: Error loading user name for:",
+                  userId,
+                  error
+                );
+                return { userId, displayName: `User ${userId.slice(0, 8)}` };
+              })
+          );
+        }
+      }
+
+      if (promises.length > 0) {
+        setNamesLoading(true);
+        try {
+          const results = await Promise.all(promises);
+          results.forEach(({ userId, displayName }) => {
+            newUserNames.set(userId, displayName);
+          });
+          console.log("ConnectionsScreen: Updated user names:", newUserNames);
+          setUserNames(newUserNames);
+        } catch (error) {
+          console.error("ConnectionsScreen: Error loading user names:", error);
+        } finally {
+          setNamesLoading(false);
+        }
+      }
+    };
+
+    if (connections.length > 0) {
+      loadUserNames();
+    }
+  }, [connections]);
 
   const handleAcceptConnection = async (connectionId: string) => {
     try {
@@ -93,10 +165,13 @@ export default function ConnectionsScreen() {
   );
 
   const renderConnectionCard = (connection: any, isIncoming: boolean) => {
+    console.log("connection", connection);
     const otherUserId = isIncoming
       ? connection.fromUserId
       : connection.toUserId;
-    const otherUserName = `User ${otherUserId.slice(0, 8)}`;
+    const otherUserName =
+      userNames.get(otherUserId) || `User ${otherUserId.slice(0, 8)}`;
+    console.log("otherUserName", otherUserName);
     const connectionStatus = getConnectionStatus(otherUserId);
     const isConnected = connectionStatus?.status === "connected";
     const isPending = connectionStatus?.status === "pending";
@@ -193,11 +268,13 @@ export default function ConnectionsScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || namesLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading connections...</Text>
+          <Text style={styles.loadingText}>
+            {loading ? "Loading connections..." : "Loading user names..."}
+          </Text>
         </View>
       </SafeAreaView>
     );
