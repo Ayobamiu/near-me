@@ -21,6 +21,7 @@ import ConnectionsScreen from "./src/screens/ConnectionsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import ChatScreen from "./src/screens/ChatScreen";
+import InterestsScreen from "./src/screens/InterestsScreen";
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
@@ -75,6 +76,14 @@ function MainApp() {
                     presentation: "modal",
                     headerShown: true,
                     title: "Chat",
+                  }}
+                />
+                <Stack.Screen
+                  name="Interests"
+                  component={InterestsScreen}
+                  options={{
+                    presentation: "modal",
+                    title: "Your Interests",
                   }}
                 />
               </Stack.Navigator>

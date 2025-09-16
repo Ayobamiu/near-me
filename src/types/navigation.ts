@@ -5,6 +5,7 @@ export type RootStackParamList = {
         otherUserName: string;
         receiverId: string;
     };
+    Interests: undefined;
 };
 
 export type TabParamList = {

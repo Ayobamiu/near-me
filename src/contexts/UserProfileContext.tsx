@@ -6,6 +6,9 @@ import userService, { UserProfile } from "../services/userService";
 interface UserProfileContextType {
   getUserProfile: (userId: string) => Promise<UserProfile | null>;
   getUserDisplayName: (userId: string) => Promise<string>;
+  updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
+  getUserInterests: (userId: string) => Promise<string[]>;
+  updateUserInterests: (interests: string[]) => Promise<void>;
   profiles: Map<string, UserProfile>;
   loading: boolean;
 }
@@ -87,6 +90,50 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({
     return `User ${userId.slice(0, 8)}`;
   };
 
+  // Get user interests
+  const getUserInterests = async (userId: string): Promise<string[]> => {
+    const profile = await getUserProfile(userId);
+    return profile?.interests || [];
+  };
+
+  // Update user profile
+  const updateUserProfile = async (data: Partial<UserProfile>) => {
+    if (!user) throw new Error("User not authenticated");
+    try {
+      await userService.updateUserProfile(user.uid, data);
+      setProfiles((prev) => {
+        const newCache = new Map(prev);
+        const currentProfile = newCache.get(user.uid);
+        if (currentProfile) {
+          newCache.set(user.uid, { ...currentProfile, ...data });
+        }
+        return newCache;
+      });
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  };
+
+  // Update user interests
+  const updateUserInterests = async (interests: string[]) => {
+    if (!user) throw new Error("User not authenticated");
+    try {
+      await userService.updateUserProfile(user.uid, { interests });
+      setProfiles((prev) => {
+        const newCache = new Map(prev);
+        const currentProfile = newCache.get(user.uid);
+        if (currentProfile) {
+          newCache.set(user.uid, { ...currentProfile, interests });
+        }
+        return newCache;
+      });
+    } catch (error) {
+      console.error("Error updating user interests:", error);
+      throw error;
+    }
+  };
+
   // Preload profiles for multiple users
   const preloadProfiles = async (userIds: string[]) => {
     const uncachedIds = userIds.filter((id) => !profiles.has(id));
@@ -112,6 +159,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({
   const value = {
     getUserProfile,
     getUserDisplayName,
+    updateUserProfile,
+    getUserInterests,
+    updateUserInterests,
     profiles,
     loading,
   };

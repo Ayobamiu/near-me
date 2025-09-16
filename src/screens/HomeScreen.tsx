@@ -14,6 +14,8 @@ import { useConnections } from "../contexts/ConnectionsContext";
 import { useUserProfile } from "../contexts/UserProfileContext";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../types/navigation";
+import InterestsDisplay from "../components/InterestsDisplay";
+import { getCommonInterests } from "../services/interestsService";
 
 // Mock data for nearby users
 const mockUsers = [
@@ -274,13 +276,13 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.userHeadline}>{user.headline}</Text>
                 <Text style={styles.userDistance}>{user.distance}</Text>
-              </View>
-              <View style={styles.interestsContainer}>
-                {user.interests.map((interest, index) => (
-                  <View key={index} style={styles.interestTag}>
-                    <Text style={styles.interestText}>{interest}</Text>
-                  </View>
-                ))}
+
+                {/* Interests */}
+                <InterestsDisplay
+                  interests={user.interests || []}
+                  maxDisplay={3}
+                  style={styles.userInterests}
+                />
               </View>
 
               {/* Show different buttons based on connection status */}
@@ -517,23 +519,9 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     fontWeight: "500",
   },
-  interestsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  userInterests: {
+    marginTop: 8,
     marginBottom: 12,
-  },
-  interestTag: {
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  interestText: {
-    fontSize: 12,
-    color: "#1976D2",
-    fontWeight: "500",
   },
   buttonRow: {
     flexDirection: "row",
