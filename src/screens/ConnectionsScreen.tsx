@@ -17,8 +17,14 @@ import { RootStackParamList } from "../types/navigation";
 
 export default function ConnectionsScreen() {
   const { user } = useAuth();
-  const { connections, acceptConnection, declineConnection, loading } =
-    useConnections();
+  const {
+    connections,
+    declinedConnections,
+    acceptConnection,
+    declineConnection,
+    resendConnectionRequest,
+    loading,
+  } = useConnections();
   const { nearbyUsers } = usePresence();
   const { getUserDisplayName } = useUserProfile();
   const navigation = useNavigation<any>();
@@ -273,6 +279,56 @@ export default function ConnectionsScreen() {
     );
   };
 
+  const renderDeclinedConnectionCard = (
+    connection: any,
+    isIncoming: boolean
+  ) => {
+    const otherUserId = isIncoming
+      ? connection.fromUserId
+      : connection.toUserId;
+    const otherUserName =
+      userNames.get(otherUserId) || `User ${otherUserId.slice(0, 8)}`;
+
+    const handleResend = async () => {
+      try {
+        await resendConnectionRequest(connection.id);
+      } catch (error) {
+        // Error handling is done in the context
+      }
+    };
+
+    return (
+      <TouchableOpacity key={connection.id} style={styles.connectionCard}>
+        <View style={styles.connectionInfo}>
+          <View style={styles.userNameRow}>
+            <Text style={styles.userName}>{otherUserName}</Text>
+            <View style={styles.declinedBadge}>
+              <Text style={styles.declinedText}>❌ Declined</Text>
+            </View>
+          </View>
+          <Text style={styles.connectionType}>
+            {isIncoming ? "Declined your request" : "You declined this request"}
+          </Text>
+          {connection.message && (
+            <Text style={styles.connectionMessage}>"{connection.message}"</Text>
+          )}
+        </View>
+
+        {/* Resend Button - only show for outgoing declined connections */}
+        {!isIncoming && (
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.resendButton, styles.flexButton]}
+              onPress={handleResend}
+            >
+              <Text style={styles.resendButtonText}>Resend Request</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   if (loading || namesLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -331,8 +387,21 @@ export default function ConnectionsScreen() {
           </>
         )}
 
+        {/* Declined Connections */}
+        {declinedConnections.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>
+              Declined ({declinedConnections.length})
+            </Text>
+            {declinedConnections.map((connection) => {
+              const isIncoming = connection.toUserId === user?.uid;
+              return renderDeclinedConnectionCard(connection, isIncoming);
+            })}
+          </>
+        )}
+
         {/* Empty State */}
-        {connections.length === 0 && (
+        {connections.length === 0 && declinedConnections.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateTitle}>No connections yet</Text>
             <Text style={styles.emptyStateText}>
@@ -521,6 +590,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   declineButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  declinedBadge: {
+    backgroundColor: "#8E8E93",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  declinedText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  resendButton: {
+    backgroundColor: "#FF9500",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  resendButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "600",

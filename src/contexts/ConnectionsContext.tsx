@@ -8,9 +8,14 @@ import notificationService from "../services/notificationService";
 
 interface ConnectionsContextType {
   connections: Connection[];
+  declinedConnections: Connection[];
   sendConnectionRequest: (toUserId: string, message?: string) => Promise<void>;
   acceptConnection: (connectionId: string) => Promise<void>;
   declineConnection: (connectionId: string) => Promise<void>;
+  resendConnectionRequest: (
+    connectionId: string,
+    message?: string
+  ) => Promise<void>;
   loading: boolean;
 }
 
@@ -31,6 +36,9 @@ export const ConnectionsProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { user } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [declinedConnections, setDeclinedConnections] = useState<Connection[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,9 +57,16 @@ export const ConnectionsProvider: React.FC<{ children: React.ReactNode }> = ({
         );
         const incomingConnections =
           await connectionsService.getIncomingConnections(user.uid);
+        const declinedConnections =
+          await connectionsService.getDeclinedConnections(user.uid);
         const allConnections = [...outgoingConnections, ...incomingConnections];
         console.log("Loaded connections on startup:", allConnections);
+        console.log(
+          "Loaded declined connections on startup:",
+          declinedConnections
+        );
         setConnections(allConnections);
+        setDeclinedConnections(declinedConnections);
         setLoading(false);
       } catch (error) {
         console.error("Error loading connections:", error);
@@ -139,11 +154,30 @@ export const ConnectionsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const resendConnectionRequest = async (
+    connectionId: string,
+    message?: string
+  ) => {
+    try {
+      await connectionsService.resendConnectionRequest(connectionId, message);
+      notificationService.showConnectionSent("User");
+    } catch (error) {
+      console.error("Error resending connection request:", error);
+      notificationService.showError(
+        "Error",
+        "Failed to resend connection request"
+      );
+      throw error;
+    }
+  };
+
   const value = {
     connections,
+    declinedConnections,
     sendConnectionRequest,
     acceptConnection,
     declineConnection,
+    resendConnectionRequest,
     loading,
   };
 

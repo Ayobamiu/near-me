@@ -46,9 +46,9 @@ class ConnectionsService {
         message?: string
     ): Promise<string> {
         try {
-            // Check if connection already exists
+            // Check if connection already exists and is not declined
             const existingConnection = await this.getConnection(fromUserId, toUserId);
-            if (existingConnection) {
+            if (existingConnection && existingConnection.status !== 'declined') {
                 throw new Error('Connection request already exists');
             }
 
@@ -117,6 +117,24 @@ class ConnectionsService {
         }
     }
 
+    // Resend a declined connection request
+    async resendConnectionRequest(
+        connectionId: string,
+        message?: string
+    ): Promise<void> {
+        try {
+            const connectionDoc = doc(this.connectionsRef, connectionId);
+            await updateDoc(connectionDoc, {
+                status: 'pending',
+                message: message || '',
+                updatedAt: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error('Error resending connection request:', error);
+            throw error;
+        }
+    }
+
     // Get user's outgoing connections (excluding declined)
     async getUserConnections(userId: string): Promise<Connection[]> {
         try {
@@ -175,6 +193,37 @@ class ConnectionsService {
             return connections;
         } catch (error) {
             console.error('Error getting incoming connections:', error);
+            return [];
+        }
+    }
+
+    // Get user's declined connections (for resending)
+    async getDeclinedConnections(userId: string): Promise<Connection[]> {
+        try {
+            const q = query(
+                this.connectionsRef,
+                where('fromUserId', '==', userId),
+                where('status', '==', 'declined'),
+                orderBy('updatedAt', 'desc')
+            );
+
+            const snapshot = await getDocs(q);
+            const connections: Connection[] = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                connections.push({
+                    id: doc.id,
+                    fromUserId: data.fromUserId,
+                    toUserId: data.toUserId,
+                    status: data.status,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                    message: data.message,
+                });
+            });
+            return connections;
+        } catch (error) {
+            console.error('Error getting declined connections:', error);
             return [];
         }
     }
