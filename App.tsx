@@ -2,21 +2,43 @@ import { StatusBar } from "expo-status-bar";
 import { View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { RootStackParamList, TabParamList } from "./src/types/navigation";
+import TabBarWithBadge from "./src/components/TabBarWithBadge";
 
 // Import contexts
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { BLEProvider } from "./src/contexts/BLEContext";
 import { PresenceProvider } from "./src/contexts/PresenceContext";
+import { ConnectionsProvider } from "./src/contexts/ConnectionsContext";
 
 // Import screens
 import AuthScreen from "./src/screens/AuthScreen";
 import HomeScreen from "./src/screens/HomeScreen";
+import ConnectionsScreen from "./src/screens/ConnectionsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import ChatScreen from "./src/screens/ChatScreen";
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<TabParamList>();
+const Stack = createStackNavigator<RootStackParamList>();
+
+function TabNavigator() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <TabBarWithBadge {...props} />}
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Connections" component={ConnectionsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
+    </Tab.Navigator>
+  );
+}
 
 function MainApp() {
   const { user, loading } = useAuth();
@@ -39,37 +61,25 @@ function MainApp() {
 
   return (
     <PresenceProvider>
-      <BLEProvider>
-        <NavigationContainer>
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
-                let iconName: keyof typeof Ionicons.glyphMap;
-
-                if (route.name === "Home") {
-                  iconName = focused ? "people" : "people-outline";
-                } else if (route.name === "Profile") {
-                  iconName = focused ? "person" : "person-outline";
-                } else if (route.name === "Settings") {
-                  iconName = focused ? "settings" : "settings-outline";
-                } else {
-                  iconName = "help-outline";
-                }
-
-                return <Ionicons name={iconName} size={size} color={color} />;
-              },
-              tabBarActiveTintColor: "#007AFF",
-              tabBarInactiveTintColor: "gray",
-              headerShown: false,
-            })}
-          >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-          </Tab.Navigator>
-          <StatusBar style="auto" />
-        </NavigationContainer>
-      </BLEProvider>
+      <ConnectionsProvider>
+        <BLEProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="MainTabs" component={TabNavigator} />
+              <Stack.Screen
+                name="Chat"
+                component={ChatScreen}
+                options={{
+                  presentation: "modal",
+                  headerShown: true,
+                  title: "Chat",
+                }}
+              />
+            </Stack.Navigator>
+            <StatusBar style="auto" />
+          </NavigationContainer>
+        </BLEProvider>
+      </ConnectionsProvider>
     </PresenceProvider>
   );
 }

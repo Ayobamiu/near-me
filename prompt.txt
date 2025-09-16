@@ -1,0 +1,42 @@
+You're a senior full-stack engineer helping me build an MVP for a mobile app called **NearMe**. The app helps event attendees discover and connect with others physically near them. 
+
+🧩 Core Feature:
+- Users can **see who is nearby** (within ~10–50 meters), view basic profile cards, and optionally connect (e.g. via short message or QR code exchange).
+
+💡 Key Requirements:
+- React Native (Expo preferred for MVP)
+- Bluetooth Low Energy (BLE) scanning for nearby devices (mobile-only)
+- GPS fallback if BLE fails or user denies permissions
+- Simple user authentication (email or phone-based)
+- Real-time presence updates via WebSocket or similar (Firebase is fine)
+- Minimal profile: name, headline, interests
+- “Nearby” tab shows list of users within range (opted in, live)
+- Button to "connect" (just shows you're interested or initiates a lightweight chat)
+- Each user can opt-in/opt-out of being visible at any time
+
+🌐 Tech Stack:
+- React Native + Expo
+- Firebase (auth, real-time DB, presence tracking)
+- BLE library like `react-native-ble-plx` or Expo alternatives
+
+🎨 Focus on:
+- Fast onboarding (one-screen sign up + join event)
+- Testable flows (mock BLE users if needed)
+- Mobile-first
+
+🧪 Development Flow:
+1. Set up project structure (monorepo or separate backend/mobile folders optional)
+2. Implement auth + onboarding
+3. Implement BLE scanning (mock if needed)
+4. Set up real-time presence
+5. Build Nearby tab with dummy users first
+6. Add connect / simple chat (or LinkedIn link)
+7. Deploy test version via Expo
+
+Start by scaffolding the full folder structure with relevant files (BLE logic, presence hook, profile screen, etc.) and dummy components. Include package.json with dependencies and setup notes.
+
+Ask me questions when needed.
+
+
+This is the project we are working on. And we are doing a step-by-step approach. We started with basic screens, then move to auth and so on.
+Let mw know where we are right now and what needs to be done next

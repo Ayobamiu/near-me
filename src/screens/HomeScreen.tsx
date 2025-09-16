@@ -7,8 +7,12 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../contexts/AuthContext";
 import { useBLE } from "../contexts/BLEContext";
 import { usePresence } from "../contexts/PresenceContext";
+import { useConnections } from "../contexts/ConnectionsContext";
+import { useNavigation } from "@react-navigation/native";
+import { RootStackParamList } from "../types/navigation";
 
 // Mock data for nearby users
 const mockUsers = [
@@ -36,9 +40,17 @@ const mockUsers = [
 ];
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const { isScanning, nearbyDevices, startScan, stopScan, hasPermission } =
     useBLE();
   const { nearbyUsers, isVisible, setVisibility, loading } = usePresence();
+  const {
+    sendConnectionRequest,
+    connections,
+    acceptConnection,
+    declineConnection,
+  } = useConnections();
+  const navigation = useNavigation<any>();
 
   const handleScanPress = () => {
     if (!hasPermission) {
@@ -60,7 +72,68 @@ export default function HomeScreen() {
     setVisibility(!isVisible);
   };
 
-  // Combine real-time users with BLE devices
+  const handleConnect = async (userId: string, userName: string) => {
+    try {
+      await sendConnectionRequest(userId, `Hi! I'd like to connect with you.`);
+    } catch (error) {
+      // Error handling is now done in the context
+    }
+  };
+
+  const handleChat = (userId: string, userName: string) => {
+    // For now, we'll create a mock connection ID
+    // In a real app, you'd get this from the connections service
+    const mockConnectionId = `connection-${userId}`;
+    navigation.navigate("Chat", {
+      connectionId: mockConnectionId,
+      otherUserName: userName,
+      receiverId: userId,
+    });
+  };
+
+  const handleAcceptConnection = async (connectionId: string) => {
+    try {
+      await acceptConnection(connectionId);
+    } catch (error) {
+      // Error handling is done in the context
+    }
+  };
+
+  const handleDeclineConnection = async (connectionId: string) => {
+    try {
+      await declineConnection(connectionId);
+    } catch (error) {
+      // Error handling is done in the context
+    }
+  };
+
+  // Check if user is already connected to someone
+  const getConnectionStatus = (userId: string) => {
+    const connection = connections.find(
+      (conn) => conn.toUserId === userId || conn.fromUserId === userId
+    );
+
+    if (!connection) return null;
+
+    if (connection.status === "accepted") {
+      return { status: "connected", connection };
+    } else if (connection.status === "pending") {
+      // Check if this is an incoming request (user is the receiver)
+      const isIncoming = connection.toUserId === userId;
+      return {
+        status: "pending",
+        connection,
+        isIncoming,
+        isOutgoing: !isIncoming,
+      };
+    } else if (connection.status === "declined") {
+      return { status: "declined", connection };
+    }
+
+    return null;
+  };
+
+  // Combine real-time users with BLE devices and mock users
   const realTimeUsers = nearbyUsers.map((user) => ({
     id: user.id,
     name: user.displayName,
@@ -79,7 +152,57 @@ export default function HomeScreen() {
     isRealTime: false,
   }));
 
-  const allUsers = [...realTimeUsers, ...bleDevices];
+  // Get users involved in connection requests (both incoming and outgoing)
+  const connectionUsers = connections.map((connection) => {
+    const isIncoming = connection.toUserId === user?.uid;
+    const otherUserId = isIncoming
+      ? connection.fromUserId
+      : connection.toUserId;
+
+    // Try to find user info from nearby users first
+    const nearbyUser = nearbyUsers.find((u) => u.id === otherUserId);
+
+    if (nearbyUser) {
+      return {
+        id: otherUserId,
+        name: nearbyUser.displayName,
+        headline: "Nearby User",
+        distance: "Online now",
+        interests: nearbyUser.interests || ["NearMe User"],
+        isRealTime: true,
+        connectionStatus: getConnectionStatus(otherUserId),
+      };
+    }
+
+    // If not in nearby users, create a basic user entry
+    return {
+      id: otherUserId,
+      name: `User ${otherUserId.slice(0, 8)}`,
+      headline: "Connection Request",
+      distance: "Offline",
+      interests: ["Connection"],
+      isRealTime: false,
+      connectionStatus: getConnectionStatus(otherUserId),
+    };
+  });
+
+  // Always show mock users so connections can be tested even when offline
+  const allUsers = [...realTimeUsers, ...bleDevices, ...mockUsers];
+
+  // Add connection users if they're not already in the list
+  const uniqueConnectionUsers = connectionUsers.filter(
+    (connUser) => !allUsers.some((user) => user.id === connUser.id)
+  );
+
+  const allUsersWithConnections = [...allUsers, ...uniqueConnectionUsers];
+
+  // Filter out users who already have connections (they'll be shown in Connections tab)
+  const nearbyUsersList = allUsersWithConnections.filter(
+    (user) =>
+      !connections.some(
+        (conn) => conn.fromUserId === user.id || conn.toUserId === user.id
+      )
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -97,7 +220,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.visibilityButton, isVisible && styles.visibilityButtonActive]}
+          style={[
+            styles.visibilityButton,
+            isVisible && styles.visibilityButtonActive,
+          ]}
           onPress={handleVisibilityToggle}
         >
           <Text style={styles.visibilityButtonText}>
@@ -107,25 +233,136 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView style={styles.userList} showsVerticalScrollIndicator={false}>
-        {allUsers.map((user) => (
-          <TouchableOpacity key={user.id} style={styles.userCard}>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user.name}</Text>
-              <Text style={styles.userHeadline}>{user.headline}</Text>
-              <Text style={styles.userDistance}>{user.distance}</Text>
-            </View>
-            <View style={styles.interestsContainer}>
-              {user.interests.map((interest, index) => (
-                <View key={index} style={styles.interestTag}>
-                  <Text style={styles.interestText}>{interest}</Text>
+        {nearbyUsersList.map((user) => {
+          const connectionStatus = getConnectionStatus(user.id);
+          const isConnected = connectionStatus?.status === "connected";
+          const isPending = connectionStatus?.status === "pending";
+          const isIncomingRequest = connectionStatus?.isIncoming;
+          const isOutgoingRequest = connectionStatus?.isOutgoing;
+
+          return (
+            <TouchableOpacity key={user.id} style={styles.userCard}>
+              <View style={styles.userInfo}>
+                <View style={styles.userNameRow}>
+                  <Text style={styles.userName}>{user.name}</Text>
+                  {isConnected && (
+                    <View style={styles.connectedBadge}>
+                      <Text style={styles.connectedText}>✓ Connected</Text>
+                    </View>
+                  )}
+                  {isPending && isOutgoingRequest && (
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.pendingText}>⏳ Pending</Text>
+                    </View>
+                  )}
+                  {isPending && isIncomingRequest && (
+                    <View style={styles.incomingBadge}>
+                      <Text style={styles.incomingText}>📨 New Request</Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-            </View>
-            <TouchableOpacity style={styles.connectButton}>
-              <Text style={styles.connectButtonText}>Connect</Text>
+                <Text style={styles.userHeadline}>{user.headline}</Text>
+                <Text style={styles.userDistance}>{user.distance}</Text>
+              </View>
+              <View style={styles.interestsContainer}>
+                {user.interests.map((interest, index) => (
+                  <View key={index} style={styles.interestTag}>
+                    <Text style={styles.interestText}>{interest}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Show different buttons based on connection status */}
+              {isConnected ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.connectButton, styles.disabledButton]}
+                    disabled={true}
+                  >
+                    <Text
+                      style={[
+                        styles.connectButtonText,
+                        styles.disabledButtonText,
+                      ]}
+                    >
+                      Connected
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.chatButton}
+                    onPress={() => handleChat(user.id, user.name)}
+                  >
+                    <Text style={styles.chatButtonText}>Chat</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : isPending && isIncomingRequest ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.acceptButton, styles.flexButton]}
+                    onPress={() =>
+                      handleAcceptConnection(connectionStatus.connection.id)
+                    }
+                  >
+                    <Text style={styles.acceptButtonText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.declineButton, styles.flexButton]}
+                    onPress={() =>
+                      handleDeclineConnection(connectionStatus.connection.id)
+                    }
+                  >
+                    <Text style={styles.declineButtonText}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : isPending && isOutgoingRequest ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.connectButton, styles.disabledButton]}
+                    disabled={true}
+                  >
+                    <Text
+                      style={[
+                        styles.connectButtonText,
+                        styles.disabledButtonText,
+                      ]}
+                    >
+                      Pending
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.chatButton, styles.disabledButton]}
+                    disabled={true}
+                  >
+                    <Text
+                      style={[styles.chatButtonText, styles.disabledButtonText]}
+                    >
+                      Chat
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.connectButton}
+                    onPress={() => handleConnect(user.id, user.name)}
+                  >
+                    <Text style={styles.connectButtonText}>Connect</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.chatButton, styles.disabledButton]}
+                    disabled={true}
+                  >
+                    <Text
+                      style={[styles.chatButtonText, styles.disabledButtonText]}
+                    >
+                      Chat
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -148,6 +385,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 20,
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
   buttonContainer: {
     marginBottom: 20,
@@ -203,11 +448,53 @@ const styles = StyleSheet.create({
   userInfo: {
     marginBottom: 12,
   },
+  userNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   userName: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4,
+    flex: 1,
+  },
+  connectedBadge: {
+    backgroundColor: "#34C759",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  connectedText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  pendingBadge: {
+    backgroundColor: "#FF9500",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  pendingText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  incomingBadge: {
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  incomingText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
   },
   userHeadline: {
     fontSize: 14,
@@ -237,14 +524,68 @@ const styles = StyleSheet.create({
     color: "#1976D2",
     fontWeight: "500",
   },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
   connectButton: {
     backgroundColor: "#007AFF",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignSelf: "flex-start",
+    flex: 1,
+    marginRight: 8,
+    alignItems: "center",
   },
   connectButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  chatButton: {
+    backgroundColor: "#34C759",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: "center",
+  },
+  chatButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
+  },
+  disabledButtonText: {
+    color: "#999",
+  },
+  flexButton: {
+    flex: 1,
+  },
+  acceptButton: {
+    backgroundColor: "#34C759",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: "center",
+  },
+  acceptButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  declineButton: {
+    backgroundColor: "#FF3B30",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  declineButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "600",

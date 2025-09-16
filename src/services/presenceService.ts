@@ -1,13 +1,13 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  where, 
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  where,
   orderBy,
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -31,7 +31,7 @@ class PresenceService {
 
   // Update user's presence
   async updatePresence(
-    userId: string, 
+    userId: string,
     userData: Partial<UserPresence>
   ): Promise<void> {
     try {
@@ -59,9 +59,9 @@ class PresenceService {
 
   // Update user location
   async updateLocation(
-    userId: string, 
-    latitude: number, 
-    longitude: number, 
+    userId: string,
+    latitude: number,
+    longitude: number,
     accuracy: number
   ): Promise<void> {
     await this.updatePresence(userId, {
@@ -79,7 +79,7 @@ class PresenceService {
       orderBy('lastSeen', 'desc')
     );
 
-    this.unsubscribe = onSnapshot(q, 
+    this.unsubscribe = onSnapshot(q,
       (snapshot) => {
         const users: UserPresence[] = [];
         snapshot.forEach((doc) => {

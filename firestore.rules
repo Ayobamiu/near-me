@@ -20,5 +20,36 @@ service cloud.firestore {
     match /profiles/{document} {
       allow read: if request.auth != null;
     }
+    
+    // Allow authenticated users to read and write connections they're involved in
+    match /connections/{connectionId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+    }
+    
+    // Allow authenticated users to create new connections
+    match /connections/{connectionId} {
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.fromUserId;
+    }
+    
+    // Allow authenticated users to read and write messages for connections they're part of
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.receiverId);
+    }
+    
+    // Allow authenticated users to create new messages
+    match /messages/{messageId} {
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.senderId;
+    }
+    
+    // Allow authenticated users to read all messages (for subscription queries)
+    match /messages/{messageId} {
+      allow read: if request.auth != null;
+    }
   }
 }
