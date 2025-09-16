@@ -164,6 +164,11 @@ export default function ConnectionsScreen() {
     (conn) => conn.status === "accepted"
   );
 
+  console.log("ConnectionsScreen: Total connections:", connections.length);
+  console.log("ConnectionsScreen: Incoming:", incomingConnections.length);
+  console.log("ConnectionsScreen: Outgoing:", outgoingConnections.length);
+  console.log("ConnectionsScreen: Accepted:", acceptedConnections.length);
+
   const renderConnectionCard = (connection: any, isIncoming: boolean) => {
     console.log("connection", connection);
     const otherUserId = isIncoming

@@ -117,12 +117,13 @@ class ConnectionsService {
         }
     }
 
-    // Get user's outgoing connections
+    // Get user's outgoing connections (excluding declined)
     async getUserConnections(userId: string): Promise<Connection[]> {
         try {
             const q = query(
                 this.connectionsRef,
                 where('fromUserId', '==', userId),
+                where('status', '!=', 'declined'),
                 orderBy('updatedAt', 'desc')
             );
 
@@ -147,12 +148,13 @@ class ConnectionsService {
         }
     }
 
-    // Get user's incoming connections
+    // Get user's incoming connections (excluding declined)
     async getIncomingConnections(userId: string): Promise<Connection[]> {
         try {
             const q = query(
                 this.connectionsRef,
                 where('toUserId', '==', userId),
+                where('status', '!=', 'declined'),
                 orderBy('updatedAt', 'desc')
             );
 
@@ -177,7 +179,7 @@ class ConnectionsService {
         }
     }
 
-    // Subscribe to user's outgoing connections
+    // Subscribe to user's outgoing connections (excluding declined)
     subscribeToUserConnections(
         userId: string,
         callback: (connections: Connection[]) => void
@@ -185,6 +187,7 @@ class ConnectionsService {
         const q = query(
             this.connectionsRef,
             where('fromUserId', '==', userId),
+            where('status', '!=', 'declined'),
             orderBy('updatedAt', 'desc')
         );
 
@@ -216,7 +219,7 @@ class ConnectionsService {
         return unsubscribe;
     }
 
-    // Subscribe to user's incoming connections
+    // Subscribe to user's incoming connections (excluding declined)
     subscribeToIncomingConnections(
         userId: string,
         callback: (connections: Connection[]) => void
@@ -224,6 +227,7 @@ class ConnectionsService {
         const q = query(
             this.connectionsRef,
             where('toUserId', '==', userId),
+            where('status', '!=', 'declined'),
             orderBy('updatedAt', 'desc')
         );
 

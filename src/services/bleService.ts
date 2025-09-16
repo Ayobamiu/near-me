@@ -24,8 +24,8 @@ class BLEService {
         // Mock scanning - simulate finding devices after a delay
         setTimeout(() => {
             const mockDevices: MockDevice[] = [
-                { id: 'cQPEG7vMWvMnSHKc5QGMvMEUi7W2', name: "Usman Test", rssi: -45 },
-                { id: 'hqjjbNUbksbFNPUifJT84lA0HD02', name: "Usman Ayobami", rssi: -60 },
+                // { id: 'cQPEG7vMWvMnSHKc5QGMvMEUi7W2', name: "Usman Test", rssi: -45 },
+                // { id: 'hqjjbNUbksbFNPUifJT84lA0HD02', name: "Usman Ayobami", rssi: -60 },
                 { id: 'mock-3', name: "Carol's Device", rssi: -75 },
             ];
 
