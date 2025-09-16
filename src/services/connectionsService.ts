@@ -263,6 +263,13 @@ class ConnectionsService {
         content: string
     ): Promise<string> {
         try {
+            console.log('ConnectionsService: Sending message:', {
+                connectionId,
+                senderId,
+                receiverId,
+                content
+            });
+
             const messageData: Omit<Message, 'id'> = {
                 connectionId,
                 senderId,
@@ -273,9 +280,10 @@ class ConnectionsService {
             };
 
             const docRef = await addDoc(this.messagesRef, messageData);
+            console.log('ConnectionsService: Message saved with ID:', docRef.id);
             return docRef.id;
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('ConnectionsService: Error sending message:', error);
             throw error;
         }
     }
@@ -285,6 +293,8 @@ class ConnectionsService {
         connectionId: string,
         callback: (messages: Message[]) => void
     ): () => void {
+        console.log('ConnectionsService: Subscribing to messages for connection:', connectionId);
+
         const q = query(
             this.messagesRef,
             where('connectionId', '==', connectionId),
@@ -293,6 +303,7 @@ class ConnectionsService {
 
         const unsubscribe = onSnapshot(q,
             (snapshot) => {
+                console.log('ConnectionsService: Messages snapshot received:', snapshot.size, 'messages');
                 const messages: Message[] = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
@@ -306,10 +317,11 @@ class ConnectionsService {
                         read: data.read,
                     });
                 });
+                console.log('ConnectionsService: Processed messages:', messages.length);
                 callback(messages);
             },
             (error) => {
-                console.error('Error in messages subscription:', error);
+                console.error('ConnectionsService: Error in messages subscription:', error);
                 if (process.env.NODE_ENV === 'development') {
                     callback([]);
                 }

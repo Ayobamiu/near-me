@@ -32,12 +32,24 @@ export default function ChatScreen({ route }: ChatScreenProps) {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!connectionId) return;
+    if (!connectionId) {
+      console.log("ChatScreen: No connectionId provided");
+      return;
+    }
+
+    console.log(
+      "ChatScreen: Subscribing to messages for connection:",
+      connectionId
+    );
 
     // Subscribe to messages for this connection
     const unsubscribe = connectionsService.subscribeToMessages(
       connectionId,
       (connectionMessages) => {
+        console.log(
+          "ChatScreen: Received messages:",
+          connectionMessages.length
+        );
         const previousMessageCount = messages.length;
         setMessages(connectionMessages);
         setLoading(false);
@@ -66,23 +78,35 @@ export default function ChatScreen({ route }: ChatScreenProps) {
     );
 
     return () => {
+      console.log("ChatScreen: Unsubscribing from messages");
       unsubscribe();
     };
   }, [connectionId]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !user) return;
+    if (!newMessage.trim() || !user) {
+      console.log("ChatScreen: Cannot send message - missing content or user");
+      return;
+    }
+
+    console.log("ChatScreen: Sending message:", {
+      connectionId,
+      senderId: user.uid,
+      receiverId,
+      content: newMessage.trim(),
+    });
 
     try {
-      await connectionsService.sendMessage(
+      const messageId = await connectionsService.sendMessage(
         connectionId,
         user.uid,
         receiverId,
         newMessage.trim()
       );
+      console.log("ChatScreen: Message sent successfully:", messageId);
       setNewMessage("");
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("ChatScreen: Error sending message:", error);
       Alert.alert("Error", "Failed to send message");
     }
   };

@@ -81,11 +81,20 @@ export default function HomeScreen() {
   };
 
   const handleChat = (userId: string, userName: string) => {
-    // For now, we'll create a mock connection ID
-    // In a real app, you'd get this from the connections service
-    const mockConnectionId = `connection-${userId}`;
+    // Find the actual connection ID from the connections array
+    const connection = connections.find(
+      (conn) =>
+        (conn.fromUserId === userId || conn.toUserId === userId) &&
+        conn.status === "accepted"
+    );
+
+    if (!connection) {
+      Alert.alert("Error", "No active connection found with this user");
+      return;
+    }
+
     navigation.navigate("Chat", {
-      connectionId: mockConnectionId,
+      connectionId: connection.id,
       otherUserName: userName,
       receiverId: userId,
     });
